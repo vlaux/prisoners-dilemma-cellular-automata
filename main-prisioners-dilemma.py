@@ -11,7 +11,7 @@ MAX_ROUNTS = 100
 STRATEGIES = [
   'random',
   'last-round',
-  'neighboor-last-round'
+  'neighbor-last-round'
 ]
 
 class PrisionersDilemma(CellularAutomata):
@@ -94,8 +94,8 @@ class PrisionersDilemma(CellularAutomata):
               continue
 
             # Play with neighbour
-            neighboor_strategy = self.m_Grid2D.getState(i,j)
-            score += self.play(strategy, neighboor_strategy)
+            neighbor_strategy = self.m_Grid2D.getState(i,j)
+            score += self.play(strategy, neighbor_strategy)
 
         self.round_results.setState(x, y, score)
       
@@ -113,15 +113,15 @@ class PrisionersDilemma(CellularAutomata):
         if i == x and j == y:
           continue
 
-        neighboor_strategy = self.m_Grid2D.getState(i,j)
-        neighboor_score = self.round_results.getState(i, j)
+        neighbor_strategy = self.m_Grid2D.getState(i,j)
+        neighbor_score = self.round_results.getState(i, j)
 
-        if (neighboor_strategy == self.COOPERATE):
+        if (neighbor_strategy == self.COOPERATE):
           count_C += 1
-          sum_score_C += neighboor_score
-        elif (neighboor_strategy == self.DEFECT):
+          sum_score_C += neighbor_score
+        elif (neighbor_strategy == self.DEFECT):
           count_D += 1
-          sum_score_D += neighboor_score
+          sum_score_D += neighbor_score
 
     mean_score_C = sum_score_C / count_C if count_C else 0
     mean_score_D = sum_score_D / count_D if count_D else 0
@@ -145,8 +145,8 @@ class PrisionersDilemma(CellularAutomata):
           if i == x and j == y:
             continue
 
-          neighboor_strategy = self.m_Grid2D.getState(i,j)
-          score_if_defect += self.play(self.DEFECT, neighboor_strategy)
+          neighbor_strategy = self.m_Grid2D.getState(i,j)
+          score_if_defect += self.play(self.DEFECT, neighbor_strategy)
       
       if (score_if_defect > curr_score):
         return self.DEFECT
@@ -159,8 +159,8 @@ class PrisionersDilemma(CellularAutomata):
           if i == x and j == y:
             continue
 
-          neighboor_strategy = self.m_Grid2D.getState(i,j)
-          score_if_coperate += self.play(self.COOPERATE, neighboor_strategy)
+          neighbor_strategy = self.m_Grid2D.getState(i,j)
+          score_if_coperate += self.play(self.COOPERATE, neighbor_strategy)
       
       if (score_if_coperate > curr_score):
         return self.COOPERATE
