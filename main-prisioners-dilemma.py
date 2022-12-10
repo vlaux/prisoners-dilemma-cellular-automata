@@ -10,8 +10,7 @@ VISUAL_MODE = True
 MAX_ROUNTS = 100
 STRATEGIES = [
   'random',
-  'last-round',
-  'neighbor-last-round'
+  'tit-for-tat',
 ]
 
 class PrisionersDilemma(CellularAutomata):
@@ -36,7 +35,7 @@ class PrisionersDilemma(CellularAutomata):
 
   assert T > R > C > P, "Payoff values must follow the rule: T > R > C > P"
 
-  STRATEGY_SELECTION = 'self-last'
+  STRATEGY_SELECTION = 'tit-for-tat'
 
   assert STRATEGY_SELECTION in STRATEGIES, "Strategy must be one of {}".format(STRATEGIES)
 
@@ -101,81 +100,35 @@ class PrisionersDilemma(CellularAutomata):
       
     self.round_results.swap()
 
-  def get_last_round_best_strategy(self, x, y):
-    count_C = 0
-    count_D = 0
-    sum_score_C = 0
-    sum_score_D = 0
-
+  def tit_for_tat_non_discriminative(self, x, y):
+    neighbors_played_C = 0
+    neighbors_played_D = 0
+    
     for i in range(x-1, x+2):
       for j in range (y-1, y+2):
-        # Don't compute self score
+
         if i == x and j == y:
           continue
 
-        neighbor_strategy = self.m_Grid2D.getState(i,j)
-        neighbor_score = self.round_results.getState(i, j)
-
+        neighbor_strategy = CA.m_Grid2D.getState(i,j)
         if (neighbor_strategy == self.COOPERATE):
-          count_C += 1
-          sum_score_C += neighbor_score
-        elif (neighbor_strategy == self.DEFECT):
-          count_D += 1
-          sum_score_D += neighbor_score
-
-    mean_score_C = sum_score_C / count_C if count_C else 0
-    mean_score_D = sum_score_D / count_D if count_D else 0
-
-    if (mean_score_C == mean_score_D):
-      return np.random.randint(2)
-    elif mean_score_C > mean_score_D:
-      return self.COOPERATE
-    else:
-      return self.DEFECT
-
-  def get_self_last_round_history(self, x, y):
-    curr_strategy = self.m_Grid2D.getState(x, y)
-    curr_score = self.round_results.getState(x, y)
-
-    if (curr_strategy == self.COOPERATE):
-      score_if_defect = 0
-      for i in range(x-1, x+2):
-        for j in range (y-1, y+2):
-
-          if i == x and j == y:
-            continue
-
-          neighbor_strategy = self.m_Grid2D.getState(i,j)
-          score_if_defect += self.play(self.DEFECT, neighbor_strategy)
-      
-      if (score_if_defect > curr_score):
-        return self.DEFECT
+          neighbors_played_C += 1
+        else:
+          neighbors_played_D += 1
+        
+    neighbors_count = neighbors_played_C + neighbors_played_D
     
-    elif (curr_strategy == self.DEFECT):
-      score_if_coperate = 0
-      for i in range(x-1, x+2):
-        for j in range (y-1, y+2):
-
-          if i == x and j == y:
-            continue
-
-          neighbor_strategy = self.m_Grid2D.getState(i,j)
-          score_if_coperate += self.play(self.COOPERATE, neighbor_strategy)
-      
-      if (score_if_coperate > curr_score):
-        return self.COOPERATE
-
-    return curr_strategy
+    if (neighbors_played_D / neighbors_count > 0.5):
+      return self.DEFECT
+    
+    return self.COOPERATE
 
   def get_new_strategy(self, x, y):
     if (self.STRATEGY_SELECTION == 'random'):
       return np.random.randint(2)
 
-    if (self.STRATEGY_SELECTION == 'self-last'):
-      return self.get_self_last_round_history(x, y)
-
-    if (self.STRATEGY_SELECTION == 'short-memory'):
-      return self.get_last_round_best_strategy(x, y)
+    if (self.STRATEGY_SELECTION == 'tit-for-tat'):
+      return self.tit_for_tat_non_discriminative(x, y)
 
     else:
       raise NotImplementedError('Strategy not implemented')
