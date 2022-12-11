@@ -2,13 +2,12 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from CellularAutomata import CellularAutomata
+from Grid2DDiscriminative import Grid2D_Periodic as Grid2D_PeriodicDiscriminative
 from Grid2D import Grid2D_Periodic
-from GUI import GUILoop
+from GUIDiscriminative import GUILoop
 
-VISUAL_MODE = True
-MAX_ROUNTS = 100
+MAX_ROUNDS = 20
 STRATEGIES = [
-  'random',
   'tit-for-tat',
 ]
 
@@ -50,12 +49,14 @@ class PrisionersDilemma(CellularAutomata):
     self.round_results = Grid2D_Periodic(w, h)
 
   def initCond(self):
-    random_strategies = np.random.randint(2, size=(self.m_Grid2D.getHeight(), self.m_Grid2D.getWidth()))
-    # random_strategies = [[0, 1], [0, 0]]
-
     for j in range(0, self.m_Grid2D.getHeight()):
       for i in range(0, self.m_Grid2D.getWidth()):
-        self.m_Grid2D.initCond(j, i, random_strategies[j][i])
+        first_row = [np.random.randint(2), np.random.randint(2), np.random.randint(2)]
+        second_row = [np.random.randint(2), 0, np.random.randint(2)]
+        third_row = [np.random.randint(2), np.random.randint(2), np.random.randint(2)]
+        random_strategies = [first_row, second_row, third_row]
+        self.m_Grid2D.initCond(j, i, random_strategies)
+
         self.round_results.initCond(j, i, 0)
 
   def play(self, a, b):
@@ -71,8 +72,7 @@ class PrisionersDilemma(CellularAutomata):
   def compute_payoffs(self):
     for x in range(0, self.m_Grid2D.getHeight()):
       for y in range(0, self.m_Grid2D.getWidth()):
-        strategy = self.m_Grid2D.getState(x,y)
-
+        strategies = self.m_Grid2D.getState(x,y)
         score = 0
 
         '''
@@ -86,49 +86,37 @@ class PrisionersDilemma(CellularAutomata):
         (x-1, y-1)  |  (x, y-1)  | (x+1, y-1)
 
         '''
-        for i in range(x-1, x+2):
-          for j in range (y-1, y+2):
-            # Do not play against itself
-            if i == x and j == y:
+        for i in range(3):
+          for j in range(3):
+            if i == 1 and j == 1:
               continue
 
-            # Play with neighbour
-            neighbor_strategy = self.m_Grid2D.getState(i,j)
-            score += self.play(strategy, neighbor_strategy)
+            neighbor_strategies = CA.m_Grid2D.getState(x-1+i, y-1+j)
+            neighbor_strategy_against_me = neighbor_strategies[2-i][2-j]
+            my_strategy_against_neighbor = strategies[i][j]
+            score += self.play(my_strategy_against_neighbor, neighbor_strategy_against_me)
 
         self.round_results.setState(x, y, score)
-      
+
     self.round_results.swap()
 
-  def tit_for_tat_non_discriminative(self, x, y):
-    neighbors_played_C = 0
-    neighbors_played_D = 0
-    
-    for i in range(x-1, x+2):
-      for j in range (y-1, y+2):
+  def tit_for_tat_discriminative(self, x, y):
+    new_strategies = [[0]*3]*3
 
-        if i == x and j == y:
+    for i in range(3):
+      for j in range(3):
+        if i == 1 and j == 1:
           continue
 
-        neighbor_strategy = CA.m_Grid2D.getState(i,j)
-        if (neighbor_strategy == self.COOPERATE):
-          neighbors_played_C += 1
-        else:
-          neighbors_played_D += 1
-        
-    neighbors_count = neighbors_played_C + neighbors_played_D
-    
-    if (neighbors_played_D / neighbors_count > 0.5):
-      return self.DEFECT
-    
-    return self.COOPERATE
+        neighbor_strategies = CA.m_Grid2D.getState(x-1+i, y-1+j)
+        neighbor_strategy_against_me = neighbor_strategies[2-i][2-j]
+        new_strategies[i][j] = neighbor_strategy_against_me
+
+    return new_strategies
 
   def get_new_strategy(self, x, y):
-    if (self.STRATEGY_SELECTION == 'random'):
-      return np.random.randint(2)
-
     if (self.STRATEGY_SELECTION == 'tit-for-tat'):
-      return self.tit_for_tat_non_discriminative(x, y)
+      return self.tit_for_tat_discriminative(x, y)
 
     else:
       raise NotImplementedError('Strategy not implemented')
@@ -150,68 +138,62 @@ class PrisionersDilemma(CellularAutomata):
   def statistic(self):
     count_C = 0
     count_D = 0
-    sum_score_C = 0
-    sum_score_D = 0
+    sum_scores = 0
 
     for x in range(0, self.m_Grid2D.getHeight()):
       for y in range(0, self.m_Grid2D.getWidth()):
-        strategy = self.m_Grid2D.getState(x,y)
+        strategies = self.m_Grid2D.getState(x, y)
         score = self.round_results.getState(x, y)
-        if strategy == self.COOPERATE:
-            count_C = count_C + 1
-            sum_score_C += score
-        elif strategy == self.DEFECT:
-            count_D = count_D + 1
-            sum_score_D += score
+
+        sum_scores += score
+
+        for i in range(3):
+          for j in range(3):
+            if i == 1 and j == 1:
+              continue
+            strategy = strategies[i][j]
+            if strategy == self.COOPERATE:
+              count_C += 1
+            elif strategy == self.DEFECT:
+              count_D += 1
 
     self.hist_C.append(count_C)
     self.hist_D.append(count_D)
     self.hist_rounds.append(self.rounds)
-    self.hist_score_C.append(sum_score_C / count_C if count_C > 0 else 0)
-    self.hist_score_D.append(sum_score_D / count_D if count_D > 0 else 0)
-    self.hist_score.append((sum_score_C + sum_score_D) / (count_C + count_D))
+    self.hist_score.append(sum_scores / (count_C + count_D))
 
   def finalCond(self):
-    if VISUAL_MODE:
-      strategy_distribution_chart = plt.figure()
-      X = np.array(self.hist_rounds)
+    strategy_distribution_chart = plt.figure()
+    X = np.array(self.hist_rounds)
 
-      ax = strategy_distribution_chart.add_subplot()
-      ax.bar(self.hist_rounds, self.hist_C, label="C", color='blue')
-      ax.bar(self.hist_rounds, self.hist_D, label="D", color='red', bottom=self.hist_C)
-      plt.xticks(X)
+    ax = strategy_distribution_chart.add_subplot()
+    ax.bar(self.hist_rounds, self.hist_C, label="C", color='blue')
+    ax.bar(self.hist_rounds, self.hist_D, label="D", color='red', bottom=self.hist_C)
+    plt.xticks(X)
 
-      results_chart = plt.figure()
-      bx = results_chart.add_subplot()
-      bx.bar(X - 0.2, self.hist_score_C, 0.2, label = 'Score C')
-      bx.bar(X, self.hist_score_D, 0.2, label = 'Score D')
-      bx.bar(X + 0.2, self.hist_score, 0.2, label = 'General score')
-      bx.legend()
+    results_chart = plt.figure()
+    bx = results_chart.add_subplot()
+    bx.bar(X, self.hist_score, 0.5, label = 'Mean score')
+    bx.legend()
 
-      plt.xticks(X)
+    plt.xticks(X)
 
-      plt.show()
+    plt.show()
 
 if __name__ == '__main__':
     boundary = 'periodic'
-    w = 100
-    h = 100
+    w = 50
+    h = 50
 
-    grid = Grid2D_Periodic(w, h)
+    grid = Grid2D_PeriodicDiscriminative(w, h)
 
     CA = PrisionersDilemma()
     CA.setGrid(grid)
     CA.initCond()
 
-    if (VISUAL_MODE):
-      gui = GUILoop(CA)
-      gui.setCellularAutomata(CA)
-      gui.init()
-      gui.loop()
-    
-    else:
-      for i in range(0, MAX_ROUNTS):
-        print('Round: ', i)
-        CA.update()
-    
+    gui = GUILoop(CA)
+    gui.setCellularAutomata(CA)
+    gui.init()
+    gui.loop()
+  
     CA.finalCond()
