@@ -9,6 +9,7 @@ from GUIDiscriminative import GUILoop
 MAX_ROUNDS = 20
 STRATEGIES = [
   'tit-for-tat',
+  'tit-for-two-tat',
 ]
 
 class PrisionersDilemma(CellularAutomata):
@@ -33,7 +34,7 @@ class PrisionersDilemma(CellularAutomata):
 
   assert T > R > C > P, "Payoff values must follow the rule: T > R > C > P"
 
-  STRATEGY_SELECTION = 'tit-for-tat'
+  STRATEGY_SELECTION = 'tit-for-two-tat'
 
   assert STRATEGY_SELECTION in STRATEGIES, "Strategy must be one of {}".format(STRATEGIES)
 
@@ -54,8 +55,18 @@ class PrisionersDilemma(CellularAutomata):
         first_row = [np.random.randint(2), np.random.randint(2), np.random.randint(2)]
         second_row = [np.random.randint(2), 0, np.random.randint(2)]
         third_row = [np.random.randint(2), np.random.randint(2), np.random.randint(2)]
+
+        historical_first_row = [np.random.randint(2), np.random.randint(2), np.random.randint(2)]
+        historical_second_row = [np.random.randint(2), 0, np.random.randint(2)]
+        historical_third_row = [np.random.randint(2), np.random.randint(2), np.random.randint(2)]
+
+        # first_row = [1, 1 , 1]
+        # second_row = [0, 0, 0]
+        # third_row = [0, 0, 0]
         random_strategies = [first_row, second_row, third_row]
+        historical_random_strategies = [historical_first_row, historical_second_row, historical_third_row]
         self.m_Grid2D.initCond(j, i, random_strategies)
+        self.m_Grid2D.initCond(j, i, historical_random_strategies, level=1)
 
         self.round_results.initCond(j, i, 0)
 
@@ -101,8 +112,8 @@ class PrisionersDilemma(CellularAutomata):
     self.round_results.swap()
 
   def tit_for_tat_discriminative(self, x, y):
-    new_strategies = [[0]*3]*3
-
+    new_strategies = [[0, 0, 0], [0, 0, 0], [0, 0, 0]]
+    
     for i in range(3):
       for j in range(3):
         if i == 1 and j == 1:
@@ -114,9 +125,32 @@ class PrisionersDilemma(CellularAutomata):
 
     return new_strategies
 
+  def tit_for_two_tat_discriminative(self, x, y):
+    new_strategies = [[0, 0, 0], [0, 0, 0], [0, 0, 0]]
+    
+    for i in range(3):
+      for j in range(3):
+        if i == 1 and j == 1:
+          continue
+
+        neighbor_strategies = CA.m_Grid2D.getState(x-1+i, y-1+j)
+        prev_neighbor_strategies = CA.m_Grid2D.getState(x-1+i, y-1+j, 1)
+        neighbor_strategy_against_me = neighbor_strategies[2-i][2-j]
+        prev_neighbor_strategy_against_me = prev_neighbor_strategies[2-i][2-j]
+
+        if (neighbor_strategy_against_me == self.DEFECT and prev_neighbor_strategy_against_me == self.DEFECT):
+          new_strategies[i][j] = self.DEFECT 
+        else:
+          new_strategies[i][j] = self.COOPERATE
+
+    return new_strategies
+
   def get_new_strategy(self, x, y):
     if (self.STRATEGY_SELECTION == 'tit-for-tat'):
       return self.tit_for_tat_discriminative(x, y)
+
+    if (self.STRATEGY_SELECTION == 'tit-for-two-tat'):
+      return self.tit_for_two_tat_discriminative(x, y)
 
     else:
       raise NotImplementedError('Strategy not implemented')
@@ -182,8 +216,8 @@ class PrisionersDilemma(CellularAutomata):
 
 if __name__ == '__main__':
     boundary = 'periodic'
-    w = 50
-    h = 50
+    w = 100
+    h = 100
 
     grid = Grid2D_PeriodicDiscriminative(w, h)
 
