@@ -43,8 +43,9 @@ class PrisionersDilemma(CellularAutomata):
     self.m_TimeStep = 0
     self.hist_C = []
     self.hist_D = []
-    self.mean_score_C = 0
-    self.mean_score_D = 0
+    self.hist_score_C = []
+    self.hist_score_D = []
+    self.hist_score = []
     self.hist_rounds = []
     self.rounds = 0
     self.round_results = Grid2D_Periodic(w, h)
@@ -156,34 +157,39 @@ class PrisionersDilemma(CellularAutomata):
     for x in range(0, self.m_Grid2D.getHeight()):
       for y in range(0, self.m_Grid2D.getWidth()):
         strategy = self.m_Grid2D.getState(x,y)
+        score = self.round_results.getState(x, y)
         if strategy == self.COOPERATE:
             count_C = count_C + 1
-            sum_score_C += self.round_results.getState(x, y)
+            sum_score_C += score
         elif strategy == self.DEFECT:
             count_D = count_D + 1
-            sum_score_D += self.round_results.getState(x, y)
-
-    self.mean_score_C = ((sum_score_C / count_C if count_C else 0) + self.mean_score_C * self.rounds - 1) / self.rounds
-    self.mean_score_D = ((sum_score_D / count_D if count_D else 0) + self.mean_score_D * self.rounds - 1) / self.rounds
+            sum_score_D += score
 
     self.hist_C.append(count_C)
     self.hist_D.append(count_D)
     self.hist_rounds.append(self.rounds)
+    self.hist_score_C.append(sum_score_C / count_C if count_C > 0 else 0)
+    self.hist_score_D.append(sum_score_D / count_D if count_D > 0 else 0)
+    self.hist_score.append((sum_score_C + sum_score_D) / (count_C + count_D))
 
   def finalCond(self):
-    print('Media de pontos de jogadores que colaboraram: {}'.format(self.mean_score_C))
-    print('Media de pontos de jogadores que traíram: {}'.format(self.mean_score_D))
-
     if VISUAL_MODE:
       strategy_distribution_chart = plt.figure()
+      X = np.array(self.hist_rounds)
+
       ax = strategy_distribution_chart.add_subplot()
       ax.bar(self.hist_rounds, self.hist_C, label="C", color='blue')
       ax.bar(self.hist_rounds, self.hist_D, label="D", color='red', bottom=self.hist_C)
-      ax.legend(['C', 'D'])
+      plt.xticks(X)
 
-      points_chart = plt.figure()
-      bx = points_chart.add_subplot()
-      bx.bar(['C', 'D'], [self.mean_score_C, self.mean_score_D])
+      results_chart = plt.figure()
+      bx = results_chart.add_subplot()
+      bx.bar(X - 0.2, self.hist_score_C, 0.2, label = 'Score C')
+      bx.bar(X, self.hist_score_D, 0.2, label = 'Score D')
+      bx.bar(X + 0.2, self.hist_score, 0.2, label = 'General score')
+      bx.legend()
+
+      plt.xticks(X)
 
       plt.show()
 
@@ -191,9 +197,6 @@ if __name__ == '__main__':
     boundary = 'periodic'
     w = 100
     h = 100
-    palettes = []
-    palettes.append(Color(0, 102, 204)) # Blue for C
-    palettes.append(Color(204, 0, 0)) # Red for D
 
     grid = Grid2D_Periodic(w, h)
 
@@ -203,7 +206,6 @@ if __name__ == '__main__':
 
     if (VISUAL_MODE):
       gui = GUILoop(CA)
-      gui.setPalette(palettes)
       gui.setCellularAutomata(CA)
       gui.init()
       gui.loop()
