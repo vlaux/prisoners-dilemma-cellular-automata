@@ -1,5 +1,5 @@
 
-# Prisioner's Dilemma modelled as a Celullar Automota
+# Prisioner's Dilemma modelled as a Celullar Automata
 
 This project is a master degree work for the Modeling and Simulation of Urban Phenomena discipline.
 
