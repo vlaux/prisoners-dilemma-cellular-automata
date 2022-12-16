@@ -7,3 +7,5 @@ Digital Humanities Master Dregree @ Federal Rural University of Rio de Janeiro
 
 Developed by Válber Laux ([@vlaux](https://github.com/vlaux)) and Fernanda Oliveira ([@oliveirafernandaz](https://github.com/oliveirafernandaz))
 
+Forked from https://github.com/mzamith-ufrrj/CA-Simulator
+
